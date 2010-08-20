@@ -5,20 +5,22 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Scanner;
 
 public class AlchemyHelper {
 	private String elemFileName;
 	private String prodFileName;
-	private HashMap<String, String> products;
+	private HashMap<String, HashSet<String>> products;
 	private LinkedList<String> elements, newElems;
 
 	private int currIdx;
 
 	public AlchemyHelper(String elemFile, String prodFile) {
-		products = new HashMap<String, String>();
+		products = new HashMap<String, HashSet<String>>();
 		elements = new LinkedList<String>();
 		newElems = new LinkedList<String>();
 
@@ -46,15 +48,21 @@ public class AlchemyHelper {
 		try {
 			Scanner sc = new Scanner(new File(prodFileName));
 			String elems, prod;
+			int num;
 			while(sc.hasNext()) {
 				elems = sc.next();
-				if(sc.hasNext()) {
-					prod = sc.next();
-					products.put(elems, prod);
-				} else {
-					System.err.println("product DB is broken");
-					System.exit(1);
+				num = sc.nextInt();
+				HashSet<String> hs = new HashSet<String>();
+				for(int i=0; i<num; i++) {
+					if(sc.hasNext()) {
+						prod = sc.next();
+						hs.add(prod);
+					} else {
+						System.err.println("product DB is broken");
+						System.exit(1);
+					}
 				}
+				products.put(elems, hs);
 			}
 			sc.close();
 		} catch (FileNotFoundException e) {
@@ -67,7 +75,8 @@ public class AlchemyHelper {
 		try {	
 			BufferedWriter out = new BufferedWriter(new FileWriter(elemFileName));
 			for(String i : elements) {
-				out.write(i + "\n");
+				out.write(i);
+				out.newLine();
 			}
 			out.close();
 		} catch (IOException e) {
@@ -78,7 +87,11 @@ public class AlchemyHelper {
 		try {
 			BufferedWriter out = new BufferedWriter(new FileWriter(prodFileName));
 			for(String i : products.keySet()) {
-				out.write(i + " " + products.get(i) + "\n");
+				out.write(i + " " + products.get(i).size() + " ");
+				for(String j : products.get(i)) {
+					out.write(j + " ");
+				}
+				out.newLine();
 			}
 			out.close();
 		} catch (IOException e) {
@@ -87,7 +100,7 @@ public class AlchemyHelper {
 	}
 
 	private String genKey(String a, String b) {
-		if(a.compareTo(b) > 0) {
+		if(a.compareTo(b) < 0) {
 			return a+"+"+b;
 		}
 
@@ -99,14 +112,20 @@ public class AlchemyHelper {
 		for(String x : elements) {
 			System.out.print(x + " ");
 		}
-		System.out.println("\n");
+		System.out.println();
+		System.out.println();
 	}
 
 	public void printAllProd() {
 		System.out.println();
 		for(String i : products.keySet()) {
-			if(!products.get(i).equals("--"))
-				System.out.println(i + " " + products.get(i));
+			if(products.get(i).size() == 0)
+				continue;
+			System.out.print(i + " ");
+			for(String j : products.get(i)) {
+				System.out.print(j + " ");
+			}
+			System.out.println();
 		}
 		System.out.println();
 	}
@@ -115,6 +134,13 @@ public class AlchemyHelper {
 		if(currIdx == elements.size()) {
 			newElems.poll();
 			currIdx = 0;
+			Collections.sort(elements);
+		}
+		
+		if(newElems.get(0).contains("*")) {
+			newElems.poll();
+			currIdx = 0;
+			Collections.sort(elements);
 		}
 
 		if(newElems.isEmpty()) {
@@ -122,6 +148,12 @@ public class AlchemyHelper {
 			return;
 		}
 
+		if(elements.get(currIdx).contains("*")) {
+			currIdx++;
+			getNextTest();
+			return;
+		}
+		
 		if(newElems.get(0).equals(elements.get(currIdx))) {
 			currIdx++;
 			getNextTest();
@@ -137,23 +169,38 @@ public class AlchemyHelper {
 			System.out.println("TRY: " + key);
 			System.out.print("Does it produce new element? [Y/N] ");
 			Scanner sc = new Scanner(System.in);
+			HashSet<String> hs = new HashSet<String>();
 			input = sc.next().toLowerCase();
-			if(input.equals("Y") || input.equals("y")) {
-				System.out.print("Input the name of product: ");
-				newProd = sc.next();
-				products.put(key, newProd);
-				if(!elements.contains(newElems)) {
-					elements.add(newProd);
-					newElems.add(newProd);
-				}
+			if(input.equals("y")) {
+				do {
+					System.out.print("Input the name of product: ");
+					newProd = sc.next();
+					hs.add(newProd);
+					if(!exists(newProd)) {
+						elements.add(newProd);
+						newElems.add(newProd);
+					}
+					System.out.print("Any other product? [Y/N] ");
+					input = sc.next().toLowerCase();
+				} while(!input.equals("n"));
+				products.put(key, hs);
 				currIdx++;
 			} else {
-				products.put(key, "--");
+				products.put(key, new HashSet<String>());
 				currIdx++;
 				getNextTest();
 			}
 			
 		}
+	}
+	
+	private boolean exists(String b) {
+		for(String i : elements) {
+			if(i.equals(b))
+				return true;
+		}
+		
+		return false;
 	}
 	
 	public void manualInput() {
@@ -225,12 +272,8 @@ public class AlchemyHelper {
 				System.err.println("not a valid choice");
 				break;
 			}
-			printMenu();
-		} while(choice != 5);
+			if(choice != 6)
+				printMenu();
+		} while(choice != 6);
 	}
-
-
-
-
-
 }
