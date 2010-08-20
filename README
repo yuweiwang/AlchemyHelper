@@ -1,1 +1,3 @@
 A no brain commnadline helper for android game Alchemy. It suggest you what to combine next.
+
+when input product, if the product is terminated (can't not combine with other product) add extra * add the end of product name)
